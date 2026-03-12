@@ -1,3 +1,7 @@
+# =====================================================
+# LSTM STEP 2 : MODEL TRAINING (SYNTHETIC DATA)
+# =====================================================
+
 # -----------------------------------------
 # STEP 0: Import required libraries
 # -----------------------------------------
@@ -8,56 +12,74 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 
 # -----------------------------------------
-# STEP 1: Prepare the same data again
-# (same as previous file, but included here
-# so this script runs independently)
+# STEP 1: Prepare synthetic data again
+# (Standalone execution)
 # -----------------------------------------
 data = {
     "hour": [6, 7, 8, 9, 10, 11, 12, 13, 14],
     "crowd_level": [
-        "Low", "Medium", "High", "High",
-        "Medium", "Medium", "Low", "Low", "Medium"
+        "Low",
+        "Medium",
+        "High",
+        "High",
+        "Medium",
+        "Medium",
+        "Low",
+        "Low",
+        "Medium"
     ]
 }
 
 df = pd.DataFrame(data)
 
-crowd_mapping = {"Low": 0, "Medium": 1, "High": 2}
+print("Original Data:")
+print(df)
+
+# -----------------------------------------
+# STEP 2: Encode crowd labels
+# -----------------------------------------
+crowd_mapping = {
+    "Low": 0,
+    "Medium": 1,
+    "High": 2
+}
+
 df["crowd_encoded"] = df["crowd_level"].map(crowd_mapping)
 
 # -----------------------------------------
-# STEP 2: Create time-series sequences
+# STEP 3: Create time-series sequences
 # -----------------------------------------
 def create_sequences(series, window_size):
-    X, y = [], []
+
+    X = []
+    y = []
+
     for i in range(len(series) - window_size):
         X.append(series[i:i + window_size])
         y.append(series[i + window_size])
+
     return np.array(X), np.array(y)
 
+
 WINDOW_SIZE = 3
+
 series = df["crowd_encoded"].values
 
 X, y = create_sequences(series, WINDOW_SIZE)
 
 # -----------------------------------------
-# STEP 3: Reshape X for LSTM
-# IMPORTANT STEP
+# STEP 4: Reshape for LSTM
 # -----------------------------------------
-# LSTM expects input shape:
-# (samples, time_steps, features)
-
 X = X.reshape((X.shape[0], X.shape[1], 1))
 
 print("Shape of X:", X.shape)
 print("Shape of y:", y.shape)
 
 # -----------------------------------------
-# STEP 4: Build the LSTM model
+# STEP 5: Build LSTM Model
 # -----------------------------------------
 model = Sequential()
 
-# LSTM layer
 model.add(
     LSTM(
         units=50,
@@ -66,11 +88,10 @@ model.add(
     )
 )
 
-# Output layer
 model.add(Dense(1))
 
 # -----------------------------------------
-# STEP 5: Compile the model
+# STEP 6: Compile Model
 # -----------------------------------------
 model.compile(
     optimizer="adam",
@@ -78,7 +99,7 @@ model.compile(
 )
 
 # -----------------------------------------
-# STEP 6: Train the model
+# STEP 7: Train Model
 # -----------------------------------------
 model.fit(
     X,
@@ -88,14 +109,22 @@ model.fit(
 )
 
 # -----------------------------------------
-# STEP 7: Predict future crowd
+# STEP 8: Predict future crowd
 # -----------------------------------------
-# Take last 3 known crowd values
-last_sequence = np.array([[series[-3], series[-2], series[-1]]])
+last_sequence = np.array([
+    [series[-3], series[-2], series[-1]]
+])
+
 last_sequence = last_sequence.reshape((1, WINDOW_SIZE, 1))
 
 prediction = model.predict(last_sequence)
 
-print("\nPredicted future crowd value:", prediction[0][0])
+print("\nPredicted Future Crowd Value:",
+      prediction[0][0])
 
+# -----------------------------------------
+# STEP 9: Save Model
+# -----------------------------------------
 model.save("lstm_crowd_model.h5")
+
+print("\n✅ Model saved as lstm_crowd_model.h5")

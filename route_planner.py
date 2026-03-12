@@ -5,9 +5,9 @@ import numpy as np
 # Convert LSTM numeric output to crowd label
 # -------------------------------------------------
 def interpret_crowd(value):
-    if value < 0.9:
+    if value < 0.5:
         return "Low"
-    elif value < 1.6:
+    elif value < 1.5:
         return "Medium"
     else:
         return "High"
@@ -16,25 +16,14 @@ def interpret_crowd(value):
 # -------------------------------------------------
 # Forecast future crowd using trained LSTM
 # -------------------------------------------------
-def forecast_crowd_lstm(model, last_sequence, arrival_hour):
+def forecast_crowd_lstm(model, last_sequence):
     """
     model: trained LSTM model
-    last_sequence: last 3 crowd levels
-    arrival_hour: hour of arrival at station
+    last_sequence: list of last 3 crowd values (0, 1, 2)
     """
     seq = np.array(last_sequence).reshape((1, 3, 1))
-    prediction = model.predict(seq, verbose=0)[0][0]
-
-    # Peak-hour bias (morning & evening)
-    if 8 <= arrival_hour <= 10 or 17 <= arrival_hour <= 20:
-        prediction += 0.7
-    elif 11 <= arrival_hour <= 16:
-        prediction += 0.2
-    else:
-        prediction -= 0.2
-
-    return interpret_crowd(prediction)
-
+    prediction = model.predict(seq, verbose=0)
+    return interpret_crowd(prediction[0][0])
 
 
 # -------------------------------------------------
@@ -94,8 +83,7 @@ def get_route_with_future_crowd(
 
         # Crowd prediction
         last_3 = station_crowd_history.get(station, [1, 1, 1])
-        crowd = forecast_crowd_lstm(model, last_3, arrival_hour)
-
+        crowd = forecast_crowd_lstm(model, last_3)
 
         station_results.append({
             "station": station,
